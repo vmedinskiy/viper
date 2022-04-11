@@ -1233,6 +1233,29 @@ func (v *Viper) find(lcaseKey string, flagDefault bool) interface{} {
 		return nil
 	}
 
+	// Env override next
+	if v.automaticEnvApplied {
+		// even if it hasn't been registered, if automaticEnv is used,
+		// check any Get request
+		if val, ok := v.getEnv(v.mergeWithEnvPrefix(lcaseKey)); ok {
+			return val
+		}
+		if nested && v.isPathShadowedInAutoEnv(path) != "" {
+			return nil
+		}
+	}
+	envkeys, exists := v.env[lcaseKey]
+	if exists {
+		for _, envkey := range envkeys {
+			if val, ok := v.getEnv(envkey); ok {
+				return val
+			}
+		}
+	}
+	if nested && v.isPathShadowedInFlatMap(path, v.env) != "" {
+		return nil
+	}
+
 	// PFlag override next
 	flag, exists := v.pflags[lcaseKey]
 	if exists && flag.HasChanged() {
@@ -1258,29 +1281,6 @@ func (v *Viper) find(lcaseKey string, flagDefault bool) interface{} {
 		}
 	}
 	if nested && v.isPathShadowedInFlatMap(path, v.pflags) != "" {
-		return nil
-	}
-
-	// Env override next
-	if v.automaticEnvApplied {
-		// even if it hasn't been registered, if automaticEnv is used,
-		// check any Get request
-		if val, ok := v.getEnv(v.mergeWithEnvPrefix(lcaseKey)); ok {
-			return val
-		}
-		if nested && v.isPathShadowedInAutoEnv(path) != "" {
-			return nil
-		}
-	}
-	envkeys, exists := v.env[lcaseKey]
-	if exists {
-		for _, envkey := range envkeys {
-			if val, ok := v.getEnv(envkey); ok {
-				return val
-			}
-		}
-	}
-	if nested && v.isPathShadowedInFlatMap(path, v.env) != "" {
 		return nil
 	}
 
